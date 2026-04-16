@@ -91,13 +91,57 @@ You can skip this manual step if you use `scripts/build-android.sh`, because the
 npm run tauri android dev
 ```
 
+## Deploying a New APK via Git
+
+The CI pipeline builds and signs an APK automatically on every push to `main`. The usual workflow is:
+
+### Change your Memos server URL
+
+Edit `.env.android.release`:
+
+```env
+MEMOS_BASE_URL=https://your-memos-server.example.com
+```
+
+Then push:
+
+```sh
+git add .env.android.release
+git commit -m "Update Memos server URL"
+git push origin main
+```
+
+### Change any other build parameter
+
+| What to change | File |
+|---|---|
+| Memos server URL | `.env.android.release` |
+| Allow HTTP in debug builds | `.env.android.debug` (`ALLOW_INSECURE_HTTP=1`) |
+| Android API level / NDK / build-tools versions | `.github/workflows/android.yml` (`ANDROID_PLATFORM`, `ANDROID_NDK_VERSION`, `ANDROID_BUILD_TOOLS`) |
+| Android permissions, share intent filter | `src-tauri/android-overrides/app/src/main/AndroidManifest.xml` |
+| Back button, file chooser, share handling | `src-tauri/android-overrides/app/src/main/java/com/memos/mobile/MainActivity.kt` |
+| App icons, colors, themes | `src-tauri/android-overrides/app/src/main/res/` |
+
+After editing any of these files, commit and push to `main` to trigger a new build.
+
+### Download the built APK
+
+After CI finishes (≈7 minutes), go to the repository's **Actions** tab, click the latest run, and download the `memos-mobile-release` artifact. It contains the signed APK.
+
+Or download directly with the GitHub CLI:
+
+```sh
+gh run download --repo utada1stlove/memos_mobile --dir ./artifacts
+```
+
+The APK will be at `artifacts/memos-mobile-release/app-universal-release-signed.apk`.
+
 ## GitHub Actions
 
 This repository includes a workflow at `.github/workflows/android.yml`.
 
-- Every push to `main` triggers an `arm64` Android release build.
-- The workflow uploads the signed APK as a GitHub Actions artifact named `memos-mobile-arm64-release`.
-- The simplest way to change the target Memos server is to edit `.env.android.release` and push the commit.
+- Every push to `main` triggers an Android release build.
+- The workflow uploads the signed APK as a GitHub Actions artifact named `memos-mobile-release`.
 
 ### Signing behavior
 
@@ -153,4 +197,4 @@ The Android shell installs a custom `WebChromeClient` chooser bridge so standard
 - Same-origin authentication is the supported V1 path. External OAuth or SSO flows that require arbitrary in-app browsing are out of scope.
 - Share autofill is intentionally generic because Memos DOM structure may vary by version.
 - Binary attachment share intents are not included in V1.
-- GitHub Actions builds are prepared in this repo, but the first remote workflow run should still be treated as a verification step.
+- GitHub Actions builds produce a `universal` APK (all ABIs in one package) rather than a per-ABI split.
