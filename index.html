@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Memos Mobile</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+    <script type="module" src="/src/main.ts" defer></script>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="card">
+        <p class="eyebrow">Memos Mobile</p>
+        <h1 id="title">Local bootstrap page</h1>
+        <p id="message">
+          If you are seeing this page, the native shell either fell back to a local
+          status screen or was launched without the Android remote window bootstrap.
+        </p>
+        <dl class="details">
+          <div>
+            <dt>Expected mode</dt>
+            <dd>Remote self-hosted Memos instance inside the Android WebView</dd>
+          </div>
+          <div>
+            <dt>Primary config</dt>
+            <dd><code>MEMOS_BASE_URL</code></dd>
+          </div>
+          <div>
+            <dt>Docs</dt>
+            <dd>See <code>README.md</code> and <code>docs/scope.md</code></dd>
+          </div>
+        </dl>
+      </section>
+    </main>
+  </body>
+</html>

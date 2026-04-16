@@ -1,0 +1,7 @@
+<resources>
+    <color name="memos_surface">#08120F</color>
+    <color name="memos_surface_soft">#10201A</color>
+    <color name="memos_brand">#0F6B57</color>
+    <color name="memos_accent">#7AD7AA</color>
+    <color name="memos_ink">#F4F1E8</color>
+</resources>

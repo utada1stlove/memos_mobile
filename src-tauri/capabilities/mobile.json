@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/mobile-schema.json",
+  "identifier": "mobile",
+  "description": "Mobile capability for the local fallback page",
+  "windows": ["main"],
+  "permissions": ["core:default"],
+  "platforms": ["android"]
+}

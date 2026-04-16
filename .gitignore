@@ -1,0 +1,16 @@
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/gen/
+.DS_Store
+*.log
+
+# Local build inputs
+.env.local
+.env.*.local
+
+# Temporary research folders created during setup work
+_cta_ref/
+_android_ref/
+_pyrossh_ref/
+_pyrossh_ref2/

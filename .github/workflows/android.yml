@@ -1,0 +1,127 @@
+name: Build Android APK
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "20"
+  JAVA_VERSION: "17"
+  ANDROID_PLATFORM: "36"
+  ANDROID_BUILD_TOOLS: "36.0.0"
+  ANDROID_NDK_VERSION: "28.2.13676358"
+  APK_UNSIGNED: src-tauri/gen/android/app/build/outputs/apk/arm64/release/app-arm64-release-unsigned.apk
+  APK_SIGNED: src-tauri/gen/android/app/build/outputs/apk/arm64/release/app-arm64-release-signed.apk
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Set up Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v rustup >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add aarch64-linux-android
+
+      - name: Install Android platform packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager \
+            "platforms;android-${ANDROID_PLATFORM}" \
+            "build-tools;${ANDROID_BUILD_TOOLS}" \
+            "ndk;${ANDROID_NDK_VERSION}"
+          {
+            echo "ANDROID_HOME=${ANDROID_SDK_ROOT}"
+            echo "ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT}"
+            echo "NDK_HOME=${ANDROID_SDK_ROOT}/ndk/${ANDROID_NDK_VERSION}"
+          } >> "$GITHUB_ENV"
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Make scripts executable
+        shell: bash
+        run: chmod +x scripts/*.sh
+
+      - name: Build arm64 release APK
+        shell: bash
+        run: ./scripts/build-android.sh release --target aarch64 --apk --ci
+
+      - name: Prepare signing configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]]; then
+            printf '%s' '${{ secrets.ANDROID_KEYSTORE_BASE64 }}' | base64 --decode > "$RUNNER_TEMP/release.keystore"
+            {
+              echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/release.keystore"
+              echo "ANDROID_KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}"
+              echo "ANDROID_KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}"
+              echo "ANDROID_KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}"
+              echo "SIGNING_MODE=repository-keystore"
+            } >> "$GITHUB_ENV"
+          else
+            echo "SIGNING_MODE=temporary-ci-keystore" >> "$GITHUB_ENV"
+          fi
+
+      - name: Sign APK
+        shell: bash
+        run: ./scripts/sign-android.sh "${APK_UNSIGNED}" "${APK_SIGNED}"
+
+      - name: Generate SHA256 checksum
+        shell: bash
+        run: sha256sum "${APK_SIGNED}" > "${APK_SIGNED}.sha256"
+
+      - name: Summarize build
+        shell: bash
+        run: |
+          {
+            echo "## Android build"
+            echo
+            echo "- Build mode: release"
+            echo "- ABI target: arm64"
+            echo "- Signing: ${SIGNING_MODE}"
+            echo "- Artifact: $(basename "${APK_SIGNED}")"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: memos-mobile-arm64-release
+          retention-days: 14
+          path: |
+            ${{ env.APK_SIGNED }}
+            ${{ env.APK_SIGNED }}.sha256
+            src-tauri/gen/android/app/build/outputs/apk/arm64/release/output-metadata.json
