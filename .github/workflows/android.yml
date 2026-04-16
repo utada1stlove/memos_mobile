@@ -86,6 +86,7 @@ jobs:
             printf '%s' '${{ secrets.ANDROID_KEYSTORE_BASE64 }}' | base64 --decode > "$RUNNER_TEMP/release.keystore"
             {
               echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/release.keystore"
+              echo "ANDROID_KEYSTORE_TYPE=${{ secrets.ANDROID_KEYSTORE_TYPE }}"
               echo "ANDROID_KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}"
               echo "ANDROID_KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}"
               echo "ANDROID_KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}"

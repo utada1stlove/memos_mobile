@@ -10,6 +10,7 @@ Environment:
   ANDROID_HOME / ANDROID_SDK_ROOT      Android SDK root
   JAVA_HOME                            Java home used to locate keytool
   ANDROID_KEYSTORE_FILE                Existing keystore file path
+  ANDROID_KEYSTORE_TYPE                Keystore type (for example JKS or PKCS12)
   ANDROID_KEY_ALIAS                    Keystore alias
   ANDROID_KEYSTORE_PASSWORD            Keystore password
   ANDROID_KEY_PASSWORD                 Key password
@@ -110,6 +111,7 @@ if [ -n "${ANDROID_KEYSTORE_FILE:-}" ]; then
 else
   TEMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/memos-mobile-sign.XXXXXX")
   ANDROID_KEYSTORE_FILE="$TEMP_DIR/memos-mobile-ci.keystore"
+  ANDROID_KEYSTORE_TYPE=${ANDROID_KEYSTORE_TYPE:-PKCS12}
   ANDROID_KEY_ALIAS=${ANDROID_KEY_ALIAS:-memos-mobile-ci}
   ANDROID_KEYSTORE_PASSWORD=${ANDROID_KEYSTORE_PASSWORD:-memosmobile}
   ANDROID_KEY_PASSWORD=${ANDROID_KEY_PASSWORD:-memosmobile}
@@ -117,25 +119,38 @@ else
   printf 'No signing secrets provided. Generating a temporary test keystore.\n' >&2
   "$KEYTOOL" -genkeypair -v \
     -keystore "$ANDROID_KEYSTORE_FILE" \
+    -storetype "$ANDROID_KEYSTORE_TYPE" \
     -storepass "$ANDROID_KEYSTORE_PASSWORD" \
     -keypass "$ANDROID_KEY_PASSWORD" \
     -alias "$ANDROID_KEY_ALIAS" \
     -keyalg RSA \
     -keysize 4096 \
     -validity 3650 \
-    -dname "CN=Memos Mobile CI, OU=GitHub Actions, O=Local, L=Shanghai, ST=Shanghai, C=CN" >/dev/null
+    -dname "CN=Memos Mobile CI, OU=GitHub Actions, O=Local, L=Shanghai, ST=Shanghai, C=CN" \
+    -noprompt >/dev/null
 fi
 
 rm -f "$ALIGNED_APK" "$SIGNED_APK"
 
 "$ZIPALIGN" -f -p 4 "$INPUT_APK" "$ALIGNED_APK"
-"$APKSIGNER" sign \
-  --ks "$ANDROID_KEYSTORE_FILE" \
-  --ks-key-alias "$ANDROID_KEY_ALIAS" \
-  --ks-pass "pass:$ANDROID_KEYSTORE_PASSWORD" \
-  --key-pass "pass:$ANDROID_KEY_PASSWORD" \
-  --out "$SIGNED_APK" \
-  "$ALIGNED_APK"
+if [ -n "${ANDROID_KEYSTORE_TYPE:-}" ]; then
+  "$APKSIGNER" sign \
+    --ks "$ANDROID_KEYSTORE_FILE" \
+    --ks-type "$ANDROID_KEYSTORE_TYPE" \
+    --ks-key-alias "$ANDROID_KEY_ALIAS" \
+    --ks-pass "pass:$ANDROID_KEYSTORE_PASSWORD" \
+    --key-pass "pass:$ANDROID_KEY_PASSWORD" \
+    --out "$SIGNED_APK" \
+    "$ALIGNED_APK"
+else
+  "$APKSIGNER" sign \
+    --ks "$ANDROID_KEYSTORE_FILE" \
+    --ks-key-alias "$ANDROID_KEY_ALIAS" \
+    --ks-pass "pass:$ANDROID_KEYSTORE_PASSWORD" \
+    --key-pass "pass:$ANDROID_KEY_PASSWORD" \
+    --out "$SIGNED_APK" \
+    "$ALIGNED_APK"
+fi
 "$APKSIGNER" verify --verbose "$SIGNED_APK" >/dev/null
 
 printf 'Signed APK: %s\n' "$SIGNED_APK"
