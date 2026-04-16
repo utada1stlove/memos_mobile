@@ -15,8 +15,8 @@ env:
   ANDROID_PLATFORM: "36"
   ANDROID_BUILD_TOOLS: "36.0.0"
   ANDROID_NDK_VERSION: "28.2.13676358"
-  APK_UNSIGNED: src-tauri/gen/android/app/build/outputs/apk/arm64/release/app-arm64-release-unsigned.apk
-  APK_SIGNED: src-tauri/gen/android/app/build/outputs/apk/arm64/release/app-arm64-release-signed.apk
+  APK_UNSIGNED: src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk
+  APK_SIGNED: src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-signed.apk
 
 jobs:
   build-android:
@@ -111,7 +111,7 @@ jobs:
             echo "## Android build"
             echo
             echo "- Build mode: release"
-            echo "- ABI target: arm64"
+            echo "- ABI target: universal (aarch64 Rust target)"
             echo "- Signing: ${SIGNING_MODE}"
             echo "- Artifact: $(basename "${APK_SIGNED}")"
           } >> "$GITHUB_STEP_SUMMARY"
@@ -119,9 +119,9 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: memos-mobile-arm64-release
+          name: memos-mobile-release
           retention-days: 14
           path: |
             ${{ env.APK_SIGNED }}
             ${{ env.APK_SIGNED }}.sha256
-            src-tauri/gen/android/app/build/outputs/apk/arm64/release/output-metadata.json
+            src-tauri/gen/android/app/build/outputs/apk/universal/release/output-metadata.json
